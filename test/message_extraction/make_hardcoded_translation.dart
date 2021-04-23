@@ -151,14 +151,14 @@ var german = {
 };
 
 /// The output directory for translated files.
-String targetDir;
+String? targetDir;
 
 const jsonCodec = const JsonCodec();
 
 /// Generate a translated json version from [originals] in [locale] looking
 /// up the translations in [translations].
 void translate(Map originals, String locale, Map translations,
-    [String filename]) {
+    [String? filename]) {
   var translated = {"_locale": locale};
   originals.forEach((name, text) {
     if (translations[name] != null) {
@@ -166,7 +166,7 @@ void translate(Map originals, String locale, Map translations,
     }
   });
   var file =
-      new File(path.join(targetDir, filename ?? 'translation_$locale.arb'));
+      new File(path.join(targetDir!, filename ?? 'translation_$locale.arb'));
   file.writeAsStringSync(jsonCodec.encode(translated));
 }
 

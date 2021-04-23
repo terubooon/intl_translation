@@ -17,7 +17,7 @@ typedef MessageIfAbsent(String message_str, List args);
 class MessageLookup extends MessageLookupByLibrary {
   get localeName => 'fr_xyz123';
 
-  final messages = _notInlinedMessages(_notInlinedMessages);
+  final Map<String, dynamic> messages = _notInlinedMessages(_notInlinedMessages);
   static _notInlinedMessages(_) => {
         "Hello from component":
             MessageLookupByLibrary.simpleMessage("Bonjour du composant"),

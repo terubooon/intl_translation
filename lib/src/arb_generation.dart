@@ -8,14 +8,14 @@ import 'package:intl_translation/src/intl_message.dart';
 /// the translation file format into a Dart interpolation. In our case we
 /// store it to the file in Dart interpolation syntax, so the transformation
 /// is trivial.
-String leaveTheInterpolationsInDartForm(MainMessage msg, chunk) {
+String? leaveTheInterpolationsInDartForm(MainMessage msg, chunk) {
   if (chunk is String) return chunk;
-  if (chunk is int) return "\$${msg.arguments[chunk]}";
+  if (chunk is int) return "\$${msg.arguments![chunk]}";
   return chunk.toCode();
 }
 
 /// Convert the [MainMessage] to a trivial JSON format.
-Map toARB(
+Map? toARB(
   MainMessage message, {
   bool supressMetadata = false,
   bool includeSourceText = false,
@@ -43,7 +43,7 @@ Map arbMetadata(MainMessage message) {
   }
   out["type"] = "text";
   var placeholders = {};
-  for (var arg in message.arguments) {
+  for (var arg in message.arguments!) {
     addArgumentFor(message, arg, placeholders);
   }
   out["placeholders"] = placeholders;
@@ -52,8 +52,8 @@ Map arbMetadata(MainMessage message) {
 
 void addArgumentFor(MainMessage message, String arg, Map result) {
   var extraInfo = {};
-  if (message.examples != null && message.examples[arg] != null) {
-    extraInfo["example"] = message.examples[arg];
+  if (message.examples != null && message.examples![arg] != null) {
+    extraInfo["example"] = message.examples![arg];
   }
   result[arg] = extraInfo;
 }
@@ -63,7 +63,7 @@ void addArgumentFor(MainMessage message, String arg, Map result) {
 String icuForm(MainMessage message) =>
     message.expanded(turnInterpolationIntoICUForm);
 
-String turnInterpolationIntoICUForm(Message message, chunk,
+String? turnInterpolationIntoICUForm(Message message, chunk,
     {bool shouldEscapeICU: false}) {
   if (chunk is String) {
     return shouldEscapeICU ? escape(chunk) : chunk;

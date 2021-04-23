@@ -18,11 +18,11 @@ String rewriteMessages(String source, String sourceName,
   var messages = findMessages(source, sourceName);
   messages.sort((a, b) => a.sourcePosition.compareTo(b.sourcePosition));
 
-  var start = 0;
+  int? start = 0;
   var newSource = new StringBuffer();
   for (var message in messages) {
     if (message.arguments.isNotEmpty) {
-      newSource.write(source.substring(start, message.sourcePosition));
+      newSource.write(source.substring(start!, message.sourcePosition));
       if (useStringSubstitution) {
         rewriteWithStringSubstitution(newSource, source, start, message);
       } else {
@@ -31,21 +31,21 @@ String rewriteMessages(String source, String sourceName,
       start = message.endPosition;
     }
   }
-  newSource.write(source.substring(start));
+  newSource.write(source.substring(start!));
   return newSource.toString();
 }
 
 /// Rewrite the message by regenerating from our internal representation.
 ///
 /// This may produce uglier source, but is more reliable.
-rewriteRegenerating(StringBuffer newSource, String source, int start, message) {
+rewriteRegenerating(StringBuffer newSource, String source, int? start, message) {
   // TODO(alanknight): We could generate more efficient code than the
   // original here, dispatching more directly to the MessageLookup.
   newSource.write(message.toOriginalCode());
 }
 
 rewriteWithStringSubstitution(
-    StringBuffer newSource, String source, int start, message) {
+    StringBuffer newSource, String source, int? start, message) {
   var originalSource =
       source.substring(message.sourcePosition, message.endPosition);
   var closingParen = originalSource.lastIndexOf(')');
@@ -71,7 +71,7 @@ final RegExp argsCheck = new RegExp('[\\n,]\\s+args\:');
 ///
 /// Report errors as coming from [sourceName]
 List findMessages(String source, String sourceName,
-    [MessageExtraction extraction]) {
+    [MessageExtraction? extraction]) {
   extraction = extraction ?? new MessageExtraction();
   try {
     var result = parseString(content: source);

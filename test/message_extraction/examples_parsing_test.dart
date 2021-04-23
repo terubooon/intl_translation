@@ -18,6 +18,6 @@ main() {
         'sample_with_messages.dart');
     var extraction = new MessageExtraction();
     var messages = extraction.parseFile(new File(file));
-    expect(messages['message2'].examples, {"x": 3});
+    expect(messages['message2']!.examples, {"x": 3});
   });
 }

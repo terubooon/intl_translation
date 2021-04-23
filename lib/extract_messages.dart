@@ -82,7 +82,7 @@ class MessageExtraction {
   ///
   /// If [transformer] is true, assume the transformer will supply any "name"
   /// and "args" parameters required in Intl.message calls.
-  Map<String, MainMessage> parseFile(File file, [bool transformer = false]) {
+  Map<String, MainMessage> parseFile(File file, [bool? transformer = false]) {
     String contents = file.readAsStringSync();
     return parseContent(contents, file.path, transformer);
   }
@@ -94,7 +94,7 @@ class MessageExtraction {
   /// If [transformer] is true, assume the transformer will supply any "name"
   /// and "args" parameters required in Intl.message calls.
   Map<String, MainMessage> parseContent(String fileContent, String filepath,
-      [bool transformer = false]) {
+      [bool? transformer = false]) {
     String contents = fileContent;
     origin = filepath;
     // Optimization to avoid parsing files we're sure don't contain any messages.
@@ -109,7 +109,7 @@ class MessageExtraction {
     return visitor.messages;
   }
 
-  CompilationUnit _parseCompilationUnit(String contents, String origin) {
+  CompilationUnit _parseCompilationUnit(String contents, String? origin) {
     var result = parseString(content: contents, throwIfDiagnostics: false);
 
     if (result.errors.isNotEmpty) {
@@ -123,12 +123,12 @@ class MessageExtraction {
   /// The root of the compilation unit, and the first node we visit. We hold
   /// on to this for error reporting, as it can give us line numbers of other
   /// nodes.
-  CompilationUnit root;
+  late CompilationUnit root;
 
   /// An arbitrary string describing where the source code came from. Most
   /// obviously, this could be a file path. We use this when reporting
   /// invalid messages.
-  String origin;
+  String? origin;
 
   String _reportErrorLocation(AstNode node) {
     var result = new StringBuffer();
@@ -158,16 +158,13 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
 
   /// Should we generate the name and arguments from the function definition,
   /// meaning we're running in the transformer.
-  bool generateNameAndArgs = false;
+  bool? generateNameAndArgs = false;
 
   /// We keep track of the data from the last MethodDeclaration,
   /// FunctionDeclaration or FunctionExpression that we saw on the way down,
   /// as that will be the nearest parent of the Intl.message invocation.
-  FormalParameterList parameters;
-  String name;
-
-  final FormalParameterList _emptyParameterList =
-      astFactory.formalParameterList(null, [], null, null, null);
+  FormalParameterList? parameters;
+  String? name;
 
   /// Return true if [node] matches the pattern we expect for Intl.message()
   bool looksLikeIntlMessage(MethodInvocation node) {
@@ -182,7 +179,7 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
     return false;
   }
 
-  Message _expectedInstance(String type) {
+  Message? _expectedInstance(String type) {
     switch (type) {
       case 'message':
         return new MainMessage();
@@ -199,19 +196,19 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
 
   /// Returns a String describing why the node is invalid, or null if no
   /// reason is found, so it's presumed valid.
-  String checkValidity(MethodInvocation node) {
+  String? checkValidity(MethodInvocation node) {
     if (parameters == null) {
       return "Calls to Intl must be inside a method, field declaration or "
           "top level declaration.";
     }
     // The containing function cannot have named parameters.
-    if (parameters.parameters.any((each) => each.isNamed)) {
+    if (parameters!.parameters.any((each) => each.isNamed)) {
       return "Named parameters on message functions are not supported.";
     }
     var arguments = node.argumentList.arguments;
-    var instance = _expectedInstance(node.methodName.name);
-    return instance.checkValidity(node, arguments, name, parameters,
-        nameAndArgsGenerated: generateNameAndArgs,
+    var instance = _expectedInstance(node.methodName.name)!;
+    return instance.checkValidity(node, arguments, name, parameters!,
+        nameAndArgsGenerated: generateNameAndArgs!,
         examplesRequired: extraction.examplesRequired);
   }
 
@@ -219,7 +216,7 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
   /// encountered before seeing the Intl.message call.
   void visitMethodDeclaration(MethodDeclaration node) {
     name = node.name.name;
-    parameters = node.parameters ?? _emptyParameterList;
+    parameters = node.parameters;
     super.visitMethodDeclaration(node);
     name = null;
     parameters = null;
@@ -229,7 +226,7 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
   /// encountered before seeing the Intl.message call.
   void visitFunctionDeclaration(FunctionDeclaration node) {
     name = node.name.name;
-    parameters = node.functionExpression.parameters ?? _emptyParameterList;
+    parameters = node.functionExpression.parameters;
     super.visitFunctionDeclaration(node);
     name = null;
     parameters = null;
@@ -245,7 +242,6 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
     } else {
       name = null;
     }
-    parameters = _emptyParameterList;
     super.visitFieldDeclaration(node);
     name = null;
     parameters = null;
@@ -261,7 +257,6 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
     } else {
       name = null;
     }
-    parameters = _emptyParameterList;
     super.visitTopLevelVariableDeclaration(node);
     name = null;
     parameters = null;
@@ -302,8 +297,8 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
   }
 
   /// Try to extract a message. On failure, return a String error message.
-  String _extractMessage(MethodInvocation node) {
-    MainMessage message;
+  String? _extractMessage(MethodInvocation node) {
+    MainMessage? message;
     try {
       if (node.methodName.name == "message") {
         message = messageFromIntlMessageCall(node);
@@ -322,7 +317,7 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
   // of the same error. Refactor to consistently throw
   // IntlMessageExtractionException instead of returning strings and centralize
   // the reporting.
-  String _validateMessage(MainMessage message) {
+  String? _validateMessage(MainMessage message) {
     try {
       message.validate();
       if (extraction.descriptionRequired) {
@@ -343,7 +338,7 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
             "'${message.name}' occurs more than once in ${extraction.origin}";
       }
     } else {
-      if (!message.skip) {
+      if (!message.skip!) {
         messages[message.name] = message;
       }
       return null;
@@ -356,16 +351,16 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
   /// and the values we get by calling [extract]. We set those values
   /// by calling [setAttribute]. This is the common parts between
   /// [messageFromIntlMessageCall] and [messageFromDirectPluralOrGenderCall].
-  MainMessage _messageFromNode(
+  MainMessage? _messageFromNode(
       MethodInvocation node,
-      MainMessage extract(MainMessage message, List<AstNode> arguments),
+      MainMessage? extract(MainMessage? message, List<AstNode> arguments),
       void setAttribute(
-          MainMessage message, String fieldName, Object fieldValue)) {
+          MainMessage message, String fieldName, Object? fieldValue)) {
     var message = new MainMessage();
     message.sourcePosition = node.offset;
     message.endPosition = node.end;
     message.arguments =
-        parameters.parameters.map((x) => x.identifier.name).toList();
+        parameters!.parameters.map((x) => x.identifier!.name).toList();
     var arguments = node.argumentList.arguments;
     var extractionResult = extract(message, arguments);
     if (extractionResult == null) return null;
@@ -383,7 +378,7 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
     // We only rewrite messages with parameters, otherwise we use the literal
     // string as the name and no arguments are necessary.
     if (!message.hasName) {
-      if (generateNameAndArgs && message.arguments.isNotEmpty) {
+      if (generateNameAndArgs! && message.arguments!.isNotEmpty) {
         // Always try for class_method if this is a class method and
         // generating names/args.
         message.name = Message.classPlusMethodName(node, name) ?? name;
@@ -418,15 +413,15 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
   /// Create a MainMessage from [node] using the name and
   /// parameters of the last function/method declaration we encountered
   /// and the parameters to the Intl.message call.
-  MainMessage messageFromIntlMessageCall(MethodInvocation node) {
-    MainMessage extractFromIntlCall(
-        MainMessage message, List<AstNode> arguments) {
+  MainMessage? messageFromIntlMessageCall(MethodInvocation node) {
+    MainMessage? extractFromIntlCall(
+        MainMessage? message, List<AstNode> arguments) {
       try {
         // The pieces of the message, either literal strings, or integers
         // representing the index of the argument to be substituted.
         List extracted;
-        extracted = _extractFromIntlCallWithInterpolation(message, arguments);
-        message.addPieces(extracted);
+        extracted = _extractFromIntlCallWithInterpolation(message!, arguments);
+        message.addPieces(extracted as List<Object>);
       } on IntlMessageExtractionException catch (e) {
         message = null;
         var err = new StringBuffer()
@@ -439,7 +434,7 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
       return message;
     }
 
-    void setValue(MainMessage message, String fieldName, Object fieldValue) {
+    void setValue(MainMessage message, String fieldName, Object? fieldValue) {
       message[fieldName] = fieldValue;
     }
 
@@ -449,10 +444,10 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
   /// Create a MainMessage from [node] using the name and
   /// parameters of the last function/method declaration we encountered
   /// and the parameters to the Intl.plural or Intl.gender call.
-  MainMessage messageFromDirectPluralOrGenderCall(MethodInvocation node) {
-    MainMessage extractFromPluralOrGender(MainMessage message, _) {
+  MainMessage? messageFromDirectPluralOrGenderCall(MethodInvocation node) {
+    MainMessage extractFromPluralOrGender(MainMessage? message, _) {
       var visitor = new PluralAndGenderVisitor(
-          message.messagePieces, message, extraction);
+          message!.messagePieces, message, extraction);
       node.accept(visitor);
       return message;
     }
@@ -476,7 +471,7 @@ class MessageFindingVisitor extends GeneralizingAstVisitor {
 /// find a plural or gender, which requires recursion, we do it with a separate
 /// special-purpose visitor.
 class InterpolationVisitor extends SimpleAstVisitor {
-  final Message message;
+  final Message? message;
 
   /// The message extraction in which we are running.
   final MessageExtraction extraction;
@@ -516,7 +511,8 @@ class InterpolationVisitor extends SimpleAstVisitor {
   }
 
   void lookForPluralOrGender(InterpolationExpression node) {
-    var visitor = new PluralAndGenderVisitor(pieces, message, extraction);
+    var visitor = new PluralAndGenderVisitor(
+        pieces, message as ComplexMessage?, extraction);
     node.accept(visitor);
     if (!visitor.foundPluralOrGender) {
       throw new IntlMessageExtractionException(
@@ -527,7 +523,7 @@ class InterpolationVisitor extends SimpleAstVisitor {
   }
 
   void handleSimpleInterpolation(InterpolationExpression node) {
-    var index = arguments.indexOf(node.expression.toString());
+    var index = arguments!.indexOf(node.expression.toString());
     if (index == -1) {
       throw new IntlMessageExtractionException(
           "Cannot find argument ${node.expression}");
@@ -535,7 +531,7 @@ class InterpolationVisitor extends SimpleAstVisitor {
     pieces.add(index);
   }
 
-  List get arguments => message.arguments;
+  List? get arguments => message!.arguments;
 }
 
 /// A visitor to extract information from Intl.plural/gender sends. Note that
@@ -547,7 +543,7 @@ class PluralAndGenderVisitor extends SimpleAstVisitor {
 
   /// A plural or gender always exists in the context of a parent message,
   /// which could in turn also be a plural or gender.
-  final ComplexMessage parent;
+  final ComplexMessage? parent;
 
   /// The pieces of the message. We are given an initial version of this
   /// from our parent and we add to it as we find additional information.
@@ -561,9 +557,10 @@ class PluralAndGenderVisitor extends SimpleAstVisitor {
   visitInterpolationExpression(InterpolationExpression node) {
     // TODO(alanknight): Provide better errors for malformed expressions.
     if (!looksLikePluralOrGender(node.expression)) return;
-    var reason = checkValidity(node.expression);
+    var reason = checkValidity(node.expression as MethodInvocation);
     if (reason != null) throw reason;
-    var message = messageFromMethodInvocation(node.expression);
+    var message =
+        messageFromMethodInvocation(node.expression as MethodInvocation);
     foundPluralOrGender = true;
     pieces.add(message);
     super.visitInterpolationExpression(node);
@@ -577,18 +574,18 @@ class PluralAndGenderVisitor extends SimpleAstVisitor {
   /// Return true if [node] matches the pattern for plural or gender message.
   bool looksLikePluralOrGender(Expression expression) {
     if (expression is! MethodInvocation) return false;
-    final node = expression as MethodInvocation;
+    final node = expression;
     if (!["plural", "gender", "select"].contains(node.methodName.name)) {
       return false;
     }
     if (!(node.target is SimpleIdentifier)) return false;
-    SimpleIdentifier target = node.target;
+    SimpleIdentifier target = node.target as SimpleIdentifier;
     return target.token.toString() == "Intl";
   }
 
   /// Returns a String describing why the node is invalid, or null if no
   /// reason is found, so it's presumed valid.
-  String checkValidity(MethodInvocation node) {
+  String? checkValidity(MethodInvocation node) {
     // TODO(alanknight): Add reasonable validity checks.
     return null;
   }
@@ -596,7 +593,7 @@ class PluralAndGenderVisitor extends SimpleAstVisitor {
   /// Create a MainMessage from [node] using the name and
   /// parameters of the last function/method declaration we encountered
   /// and the parameters to the Intl.message call.
-  Message messageFromMethodInvocation(MethodInvocation node) {
+  Message? messageFromMethodInvocation(MethodInvocation node) {
     var message;
     switch (node.methodName.name) {
       case "gender":
@@ -658,7 +655,7 @@ class PluralAndGenderVisitor extends SimpleAstVisitor {
 /// If a message is a string literal without interpolation, compute
 /// a name based on that and the meaning, if present.
 // NOTE: THIS LOGIC IS DUPLICATED IN intl AND THE TWO MUST MATCH.
-String computeMessageName(String name, String text, String meaning) {
+String? computeMessageName(String name, String? text, String? meaning) {
   if (name != null && name != "") return name;
   return meaning == null ? text : "${text}_${meaning}";
 }

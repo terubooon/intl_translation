@@ -18,7 +18,7 @@ import 'package:args/args.dart';
 import 'package:intl_translation/src/message_rewriter.dart';
 import 'package:dart_style/dart_style.dart';
 
-String outputFileOption = 'transformed_output.dart';
+String? outputFileOption = 'transformed_output.dart';
 
 bool useStringSubstitution = true;
 bool replace = false;
@@ -66,7 +66,7 @@ main(List<String> args) {
       print('No changes to $outputFile');
     } else {
       print('Writing new source to $outputFile');
-      var out = new File(outputFile);
+      var out = new File(outputFile!);
       out.writeAsStringSync(formatter.format(newSource));
     }
   }

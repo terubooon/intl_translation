@@ -4,7 +4,7 @@ import "print_to_list.dart";
 import "package:test/test.dart";
 
 verifyResult() {
-  var lineIterator;
+  late var lineIterator;
   verify(String s) {
     lineIterator.moveNext();
     var value = lineIterator.current;
