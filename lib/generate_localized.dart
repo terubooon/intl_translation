@@ -147,8 +147,8 @@ class MessageGeneration {
       // being inlined into the main one, defeating the space savings. Issue
       // 24356
       """
-  final messages = _notInlinedMessages(_notInlinedMessages);
-  static _notInlinedMessages(_) => <String, Function> {
+  final messages = _notInlinedMessages(_notInlinedMessages) as Map<String, dynamic>;
+  static dynamic _notInlinedMessages(dynamic _) => <String, Function> {
 """;
 
   /// [generateIndividualMessageFile] for the beginning of the file,
@@ -224,7 +224,7 @@ class MessageLookup extends MessageLookupByLibrary {
       output.write(loadOperation);
     }
     output.write("};\n");
-    output.write("\nMessageLookupByLibrary _findExact(String localeName) {\n"
+    output.write("\nMessageLookupByLibrary? _findExact(String localeName) {\n"
         "  switch (localeName) {\n");
     for (var rawLocale in allLocales) {
       var locale = Intl.canonicalizedLocale(rawLocale);
@@ -287,7 +287,7 @@ bool _messagesExistFor(String locale) {
   }
 }
 
-MessageLookupByLibrary _findGeneratedMessagesFor(String locale) {
+MessageLookupByLibrary? _findGeneratedMessagesFor(String locale) {
   var actualLocale = Intl.verifiedLocale(locale, _messagesExistFor,
       onFailure: (_) => null);
   if (actualLocale == null) return null;
